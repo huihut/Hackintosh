@@ -1,0 +1,770 @@
+bplist00�	
+ !"ZOutputTypeVSecure_RequiresAdminPrivileges_ScriptInterpreterWCreator^TextForeground[AcceptsText^TextBackground_PromptForFileOnLaunch\TextEncoding\TextSettingsZScriptArgsXTextSizeXTextFont\DropSuffixesYDroppable_RemainRunningAfterCompletion_InterpreterArgs\AcceptsFiles[Text Window		W/bin/sh\Platypus-4.8W#000000W#ffffffOO�bplist00�	
+X$objectsX$versionY$archiverT$top�U$nullOOE#!/bin/sh
+
+WorkDir1="/System/Library/Extensions"
+WorkDir2="/Library/Extensions"
+WorkDir3="/Extra/Extensions"
+
+LeoCacheFile="/System/Library/Extensions.mkext"
+SnowLeoCacheFile="/System/Library/Caches/com.apple.kext.caches/Startup/Extensions.mkext"
+CacheFile="/System/Library/Caches/com.apple.kext.caches/Startup/kernelcache"
+AppleKextExcludeListKextInfoPlistPath=`find /System/Library/Extensions/AppleKextExcludeList.kext -name Info.plist`
+
+SystemCacheFile=""
+SystemName=""
+
+KernOSRelease=`sysctl -n kern.osrelease | cut -d "." -f1`
+
+HomeDir=~
+TimeOut=10
+
+Version="2.5.6 汉化版"
+Creator="cVad"
+Released="2008-2013"
+
+memoMSG() {
+
+cat << EOF
+                                 -- Kext Utility --
+                           v$Version © $Creator $Released
+                                     汉化:ysc3839
+                                 Mac OS X 10.5-10.9
+                                  快速修复所有Kext权限
+                            OSKextSigExceptionList 更新器
+                                  /S/L/E Kexts 安装器
+                                  Mkext 打包/解包工具
+                                 cvad-mac.narod.ru
+                                  www.applelife.ru
+
+EOF
+}
+
+SystemSpecMSG() {
+
+KERN_Version=`echo $(sysctl -n kern.version | cut -d ";" -f1)`
+MachineHardwareName=`uname -m`
+
+MODEL_ID=`sysctl -n hw.model`
+
+ProductName=`sw_vers |grep ProductName`
+ProductVersion=`echo $(sw_vers |grep ProductVersion)`
+BuildVersion=`echo $(sw_vers |grep BuildVersion)`
+
+User=$USER
+KERN_Hostname=`sysctl -n kern.hostname`
+KERN_Bootargs=`sysctl -n kern.bootargs`
+
+CPU_TYPE="`sysctl -n machdep.cpu.brand_string | sed 's/  */ /g'`"
+CPU_FEATURES="`sysctl -n machdep.cpu.features` `sysctl -n machdep.cpu.extfeatures` `sysctl -n machdep.cpu.leaf7_features`"
+CPUCores="`sysctl -n hw.physicalcpu`"
+CPUThreads="`sysctl -n hw.logicalcpu`"
+temp="`sysctl -n hw.cpufrequency_max`"
+if [ ${temp} ]
+	then
+		CPUFrequency_MAX=$((${temp}/1000000))
+	else
+		CPUFrequency_MAX=0
+fi
+temp="`sysctl -n hw.cpufrequency_min`"
+if [ ${temp} ]
+	then
+		CPUFrequency_MIN=$((${temp}/1000000))
+	else
+		CPUFrequency_MIN=0
+fi
+temp="`sysctl -n hw.cpufrequency`"
+if [ ${temp} ]
+	then
+		CPUFrequency=$((${temp}/1000000))
+	else
+		CPUFrequency=0
+fi
+temp="`sysctl -n hw.busfrequency`"
+if [ ${temp} ]
+	then
+		BUSFrequencyFSB=$((${temp}/1000000))
+		BUSFrequency=$(($BUSFrequencyFSB/4))
+	else
+		BUSFrequencyFSB=0
+		BUSFrequency=0
+fi
+temp="`sysctl -n hw.l1icachesize`"
+if [ ${temp} ]
+	then
+		Cache_L1i=$((${temp}/1024))
+	else
+		Cache_L1i=0
+fi
+temp="`sysctl -n hw.l1dcachesize`"
+if [ ${temp} ]
+	then
+		Cache_L1d=$((${temp}/1024))
+	else
+		Cache_L1d=0
+fi
+temp="`sysctl -n hw.l2cachesize`"
+if [ ${temp} ]
+	then
+		Cache_L2=$((${temp}/1024))
+	else
+		Cache_L2=0
+fi
+temp="`sysctl -n hw.l3cachesize`"
+if [ ${temp} ]
+	then
+		Cache_L3=$((${temp}/1024))
+	else
+		Cache_L3=0
+fi
+CPUSignature="`sysctl -n machdep.cpu.signature`"
+CPUSignatureHex=$(echo "obase=16; $CPUSignature" | bc)
+
+temp="`sysctl -n hw.memsize`"
+if [ ${temp} ]
+	then
+		MEMSIZE=$((${temp}/1048576))
+	else
+		MEMSIZE=0
+fi
+SwapUsage="`sysctl -n vm.swapusage`"
+HibernateMode="`sysctl -n kern.hibernatemode`"
+
+cat << EOF
+产品名称       : Mac OS X $ProductVersion $BuildVersion
+启动参数       : $KERN_Bootargs
+内核版本       : $KERN_Version
+型号标识符     : $MODEL_ID KernelMode: $MachineHardwareName
+处理器名称     : ${CPU_TYPE}
+CPU ID       : Ox$CPUSignatureHex ($CPUSignature)
+处理器核心     : ${CPUCores} 核心, ${CPUThreads} 线程 @ ${CPUFrequency_MAX}MHz 总线: ${BUSFrequency}MHz 前端总线: ${BUSFrequencyFSB}MHz
+处理器缓存     : L1i:${Cache_L1i}Kb L1d:${Cache_L1d}Kb L2:${Cache_L2}Kb L3:${Cache_L3}Kb
+处理器特征     : ${CPU_FEATURES}
+内存          : ${MEMSIZE}Mb HibernateMode: $HibernateMode
+交换使用       : $SwapUsage
+用户          : $USER on $KERN_Hostname
+
+EOF
+}
+
+StartMSG() {
+
+case "${KernOSRelease}" in
+    [0-8])
+		echo "检测到 ... 不支持的 Mac OS X 系统"
+                SystemName="unsupported MAC OS X system"
+        ;;
+    9)
+		echo "检测到  ...  Mac OS X \"Leopard\"."
+                SystemCacheFile="${LeoCacheFile}"
+                SystemName="Mac OS X \"Leopard\""
+        ;;
+    10)
+		echo "检测到  ...  Mac OS X \"Snow Leopard\"."
+                SystemCacheFile="${SnowLeoCacheFile}"
+                SystemName="Mac OS X \"Snow Leopard\""
+        ;;
+    11)
+		echo "检测到  ...  Mac OS X \"Lion\"."
+                SystemCacheFile="${CacheFile}"
+                SystemName="Mac OS X \"Lion\""
+        ;;
+    12)
+		echo "检测到  ...  Mac OS X \"Mountain Lion\"."
+                SystemCacheFile="${CacheFile}"
+                SystemName="Mac OS X \"Mountain Lion\""
+        ;;
+    13)
+		echo "检测到  ...  Mac OS X \"Mavericks\"."
+                SystemCacheFile="${CacheFile}"
+                SystemName="Mac OS X \"Mavericks\""
+        ;;
+	*)
+		echo "检测到  ...  $(sysctl -n kern.version | cut -d ":" -f1)."
+                SystemCacheFile="${CacheFile}"
+                SystemName=`echo $(sysctl -n kern.version | cut -d ":" -f1)`
+        ;;
+esac
+
+echo
+echo "开始工作: $(date "+%Y-%m-%d %H:%M:%S %z")"
+echo
+
+}
+
+ErrMSG() {	
+
+	memoMSG
+	usage
+}
+
+usage() {
+	# Usage format
+cat <<EOF
+     使用说明:
+
+     1. 要安装驱动程序，请把驱动文件(*.kext, *.plugin, *.bundle, *.ppp)拖放到本程序图标上。
+        驱动将会被安装到 "/System/Library/Extensions/" 文件夹。
+     2. 要重建驱动缓存，请直接运行本程序。
+     3. 要修复或打包包含Kext的MKext文件夹，请把文件夹拖放到本程序图标上。
+        将会创建名为"Extensions.mkext"的文件。
+     4. 要解包MKext文件，请把文件拖放到本程序图标上。
+        您解包的MKext的文件夹将会被放置在桌面上。
+
+                                                                    Enjoy ...
+    
+EOF
+}
+
+SetPermissionsMod()
+{
+	CountFiles=0
+	CountKext=0
+	#CountPpp=0
+	#CountPlugin=0
+	#CountBundle=0
+	#CountPlist=0
+	#CountBin=0
+	AllCodeFiles=0
+
+InDir=$1
+printf "修复权限 \"${InDir}\" ..."
+
+OldIFS=$IFS   # save old $IFS
+IFS=$'\n'     # new $IFS  
+
+starttime=`date +%s`
+
+    for files in $(find "${InDir}")
+	    do
+	        case "${files}" in
+				*.kext|*.ppp|*.plugin|*.bundle)  let "CountKext+=1";  chmod 755 "${files}";;
+				*CodeDirectory|*CodeRequirements|*CodeResources|*CodeSignature|*.plist|*.strings|*PkgInfo|*.dfu|*.zlib|*.pdf|*LICENSE|*.icns|*.tif|*.tiff)
+				if [[ -f "${files}" ]] 
+#   				If files (not link) chmod 644
+					then 
+						chmod 644 "${files}"
+#   				If files is link chmod -h 755
+                    else
+						chmod -h 755 "${files}"
+				fi
+				let "AllCodeFiles+=1"
+				;;
+
+				*)
+		        chmod -h 755 "${files}" ;;
+
+			esac
+
+			chown -h root:wheel "${files}"
+
+	        let "CountFiles+=1"
+	
+            if [ $((CountFiles/400*400)) -eq ${CountFiles} ] # count very quickly
+				then
+					 printf "."
+			fi
+
+    	done
+
+finishtime=`date +%s`
+
+IFS=$OldIFS
+
+printf " 完成\n"
+
+# echo
+#echo "-- Total processed: ${CountFiles} files (${CountKext} kexts) for $(($finishtime-$starttime)) sec."
+echo "-- 总计处理: ${CountFiles} 个文件 用时 $(($finishtime-$starttime)) 秒"
+
+echo
+
+}
+
+SystemCacheUpdate() {
+
+#echo "SystemCacheUpdate() - ${SystemCacheFile}"
+#echo "SystemCacheUpdate() Detected  ...  ${SystemName}"
+
+let "count=0"
+#echo "count=${count}"
+#echo "TimeOut=${TimeOut}"
+
+printf "更新系统缓存文件 "
+        
+rm -Rf /System/Library/Caches/com.apple.bootstamps/* 2>/dev/null
+rm -Rf /System/Library/Caches/com.apple.kernelcaches/* 2>/dev/null
+rm -Rf /System/Library/Caches/com.apple.kext.caches/Directories/Library/Extensions/* 2>/dev/null
+rm -Rf /System/Library/Caches/com.apple.kext.caches/Directories/System/Library/Extensions/* 2>/dev/null
+rm -Rf /System/Library/Caches/com.apple.kext.caches/Startup/* 2>/dev/null
+rm -Rf /System/Library/Extensions/Caches/* 2>/dev/null
+rm -f "${SystemCacheFile}" 2>/dev/null
+
+touch "${WorkDir1}"
+touch "${WorkDir2}"
+kextcache -system-caches -local-root-all&
+
+while sleep 1
+	do
+		if [ -f "${SystemCacheFile}" ]
+			then
+				printf " 完成\n"
+				#if [ $count -gt $TimeOut ]
+				#then
+					#echo "-- Build time = $((count-TimeOut)) sec"
+				#else
+					echo "-- 构建时间 $count 秒 --"
+				#fi
+				return
+		elif [ $count -eq $TimeOut ]
+			then
+				#printf " False\n"
+				#echo "-- Timeout $count sec"
+				#echo
+				#printf "Forced updating the system cache files "
+				#touch "${WorkDir1}"
+				kextcache -update-volume / -force&
+		elif [ $count -gt $((12*TimeOut-1)) ]  # timeout2=12*timeout=12*10=120sec
+			then
+				printf " 失败\n"
+				echo "-- 超时 ${count} 秒\n"
+				echo "-- 未知错误 --"
+				return
+		fi
+		let "count+=1"
+
+		if [ `expr "$count" % 2` -eq "0" ]
+			then
+				printf "."
+		fi
+
+
+	done
+}
+
+packMkext() {
+
+	
+	FullDropInDir=$1
+	DirDropInDir=$(dirname "${FullDropInDir}") 
+	BaseDropInDir=$(basename "${FullDropInDir}") 
+	
+if [[ `find "${FullDropInDir}" -name *.kext` ]]
+
+    then
+cat <<EOF
+Task: Pack "${FullDropInDir}"
+        to "${DirDropInDir}/Extensions.mkext"
+EOF
+		
+    	echo
+    	
+        SetPermissionsMod "${FullDropInDir}"
+
+        if [ -e "$DirDropInDir/Extensions.mkext" ]
+            then
+                printf "备份 \"Extensions.mkext\" 到 \"Extensions.bak.mkext\" ... "
+                mv -f "$DirDropInDir/Extensions.mkext" "$DirDropInDir/Extensions.bak.mkext"
+                printf "完成!\n"
+                echo
+        fi
+	
+    	touch "$FullDropInDir"
+    	
+    	starttime=`date +%s`
+
+    	i386_ppc_kexts=$( kextfind -- "${FullDropInDir}" \( -arch-exact i386 -or -arch-exact ppc,i386 \) )""
+        
+		if [[ "${SnowLeoExist}" = "no" || ! "" = "${i386_ppc_kexts}" ]]
+
+#			If one of the conditions is true then	
+			then
+					printf "找到 仅 i386 的架构 kext\n"
+					printf "打包 i386 架构的 \"Extensions.mkext\" ... "
+	    			
+	    			if ( kextcache -a i386 -z -m "$DirDropInDir/Extensions.mkext" "$FullDropInDir" ) 
+	    				then
+	    					printf "完成!\n"
+	    					finishtime=`date +%s`
+		   	 				echo "-- 构建时间 = $(($finishtime-$starttime)) 秒 --"
+	    					echo
+	    					printf "修复 \"Extensions.mkext\" 权限 ... "
+	    			
+	    					chmod -R 644 "$DirDropInDir/Extensions.mkext"
+	    					chown -R root:wheel "$DirDropInDir/Extensions.mkext"
+	    			
+		    				printf "完成!\n"
+	    					echo
+	    				else 
+	    					echo
+	    					echo "抱歉，无法创建 \"Extensions.mkext\""
+	    					echo
+	    					return
+	
+	    			fi
+			else
+#					printf "Found i386/x86_64 (arch) kext(s).\n"
+					printf "打包 i386/x86_64 架构的 \"Extensions.mkext\" ... "
+
+#                   /usr/sbin/kextcache -z -m /Extra/Extensions.mkext /Extra/Extensions/					
+	    			if ( kextcache -z -m "$DirDropInDir/Extensions.mkext" "$FullDropInDir" ) 
+	    				then
+	    					printf "完成!\n"
+	    					finishtime=`date +%s`
+		   	 				echo "-- 构建时间 = $(($finishtime-$starttime)) 秒 --"
+	    					echo
+	    					printf "修复 \"Extensions.mkext\" 权限 ... "
+	    			
+	    					chmod -R 644 "$DirDropInDir/Extensions.mkext"
+	    					chown -R root:wheel "$DirDropInDir/Extensions.mkext"
+	    			
+		    				printf "完成!\n"
+	    					echo
+	    				else 
+	    					echo
+	    					echo "抱歉，无法创建 \"Extensions.mkext\""
+	    					echo
+	    					return
+	    			fi
+		fi
+	else
+		printf "没有事情发生 -- 找不到Kext文件!\n"
+		printf "\n"
+fi
+} 
+
+unpackMkext()	{
+
+cat <<EOF
+Task: UnPack "${FullDropName}"
+          to "${HomeDir}/Desktop/${BaseDropName}_content"
+EOF
+	echo
+
+	printf "搜索 \"${BaseDropName}_content\" ... "
+
+	if [ -d "${HomeDir}/Desktop/${BaseDropName}_content" ]
+		then
+			printf "找到\n"
+			rm -rf "${HomeDir}/Desktop/${BaseDropName}_content.bak"
+			echo
+			printf "备份 \"${BaseDropName}_content\" 到 \"${BaseDropName}_content.bak\" ... "
+			mv -f "${HomeDir}/Desktop/${BaseDropName}_content/" "${HomeDir}/Desktop/${BaseDropName}_content.bak/" 
+			printf "完成!\n"
+			mkdir -p -m 775 "${HomeDir}/Desktop/${BaseDropName}_content"
+			echo
+		else
+			printf "未找到\n"
+			echo
+			mkdir -p -m 775 "${HomeDir}/Desktop/${BaseDropName}_content"
+	fi
+			printf "正在解包 \"${BaseDropName}\" ... "
+
+	mkextunpack -v -d "${HomeDir}/Desktop/${BaseDropName}_content" "$FullDropName" 2> /dev/null
+	printf "完成!\n"
+	echo
+
+}
+
+UpdateOSKextSigExceptionList() {
+
+KextsTestDir="${1}"
+#echo "1=${1}"
+#echo "KextsTestDir=${KextsTestDir}"
+
+# cat <<EOF
+# Task:	Update OSKextSigExceptionList.
+#  
+# EOF
+
+if [[ ! "${AppleKextExcludeListKextInfoPlistPath}" ]] # Check if AppleKextExcludeList.kext exist
+	then
+		echo "AppleKextExcludeList.kext 未找到"
+		return
+fi
+
+AppleKextExcludeListKextCFBundleVersion="$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "${AppleKextExcludeListKextInfoPlistPath}" 2>/dev/null)"
+echo "找到 $(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "${AppleKextExcludeListKextInfoPlistPath}" 2>/dev/null):$AppleKextExcludeListKextCFBundleVersion"
+if [[ ! -e "${AppleKextExcludeListKextInfoPlistPath/Info.plist/Info_$AppleKextExcludeListKextCFBundleVersion.plist}" ]]
+	then
+		BackUpInfoPlist="${AppleKextExcludeListKextInfoPlistPath/Info.plist/Info_$AppleKextExcludeListKextCFBundleVersion.plist}"
+		cp "${AppleKextExcludeListKextInfoPlistPath}" "${BackUpInfoPlist}"
+		# echo ${A#*AB}
+		echo "备份 ${AppleKextExcludeListKextInfoPlistPath#*Contents/} 到 ${BackUpInfoPlist#*Contents/}"
+		
+fi
+echo
+
+printf "正在更新 OSKextSigExceptionList ."
+
+starttime=`date +%s`
+
+AllCheckKextsCount=0
+AddedUnSigKextsCount=0
+UpdatedUnSigKextsCount=0
+ErrorsCount=0
+
+
+KextsInfoPlistPath=`find "${KextsTestDir}" -name Info.plist`
+#echo "${KextsInfoPlistPath}"
+
+# KextArch=$(kextfind "${CurrentKext}" -report -no-header -pid)
+# 
+OldIFS=$IFS
+IFS=$'\n'
+# 
+#echo "Examine AppleKextExcludeList.kext for entry:"
+for CurrentKextInfoPlistPath in ${KextsInfoPlistPath}
+	do
+	# Found Info for Current Kext 
+	CurrentKextCFBundleIdentifier="$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "${CurrentKextInfoPlistPath}" 2>/dev/null)"
+ 	if [[ ! "${CurrentKextCFBundleIdentifier}" ]]
+  		then
+  			#echo "Not Found CFBundleIdentifier in: \"${CurrentKextInfoPlistPath}\""
+  			let "ErrorsCount+=1"
+  		else
+			#echo "Found CFBundleIdentifier in: \"${CurrentKextInfoPlistPath}\":${CurrentKextCFBundleIdentifier}"
+  			CurrentKextCFBundleVersion="$(/usr/libexec/PlistBuddy -c "Print CFBundleVersion" "${CurrentKextInfoPlistPath}" 2>/dev/null)"
+  			if [[ ! "${CurrentKextCFBundleVersion}" ]]
+  				then
+  					#echo "Not Found CFBundleVersion in: \"${CurrentKextInfoPlistPath}\""
+  					let "ErrorsCount+=1"
+				else
+					#echo "Found: ${CurrentKextCFBundleIdentifier}:${CurrentKextCFBundleVersion}"
+					CurrentKext_CodeSignaturePath="${CurrentKextInfoPlistPath/Info.plist/_CodeSignature/CodeResources}"
+					let "AllCheckKextsCount+=1"
+					#echo "${CurrentKext_CodeSignaturePath}"
+					if [[ ! -e "${CurrentKext_CodeSignaturePath}" ]]
+						then
+							#echo "Found: _CodeSignaturePath for ${CurrentKextCFBundleIdentifier}:${CurrentKextCFBundleVersion}"
+							CFBundleVersionFound="$(/usr/libexec/PlistBuddy -c "Print OSKextSigExceptionList:${CurrentKextCFBundleIdentifier}" "${AppleKextExcludeListKextInfoPlistPath}" 2>/dev/null)"
+  							if [[ "${CFBundleVersionFound}" ]]
+  								then
+									#CFBundleVersionFound="$(/usr/libexec/PlistBuddy -c "Print OSKextSigExceptionList:${CurrentKextCFBundleIdentifier} string" "${AppleKextExcludeListKextInfoPlistPath}" 2>/dev/null)"
+									#echo "${CFBundleVersionFound}"
+  									#printf "${CurrentKextCFBundleIdentifier}:${CFBundleVersionFound} Found\n"
+									if ! [[ "${CFBundleVersionFound}" = "${CurrentKextCFBundleVersion}" ]]
+										then
+											#Result="$(/usr/libexec/PlistBuddy -c "Delete OSKextSigExceptionList:${CurrentKextCFBundleIdentifier}" "${AppleKextExcludeListKextInfoPlistPath}")"
+											#printf "Update ${CurrentKextCFBundleIdentifier}:${CFBundleVersionFound} to :${CurrentKextCFBundleVersion} ... "
+											Result="$(/usr/libexec/PlistBuddy -c "Set OSKextSigExceptionList:${CurrentKextCFBundleIdentifier} \"${CurrentKextCFBundleVersion}\"" "${AppleKextExcludeListKextInfoPlistPath}")"
+											if [[ "${Result}" ]]
+												then
+													#printf "Error\n"
+													let "ErrorsCount+=1"
+												else
+													#printf "OK\n"
+													let "UpdatedUnSigKextsCount+=1"
+
+											fi
+									fi
+								else
+  									#printf "Add ${CurrentKextCFBundleIdentifier}:${CurrentKextCFBundleVersion} ... "
+  									Result="$(/usr/libexec/PlistBuddy -c "Add OSKextSigExceptionList:${CurrentKextCFBundleIdentifier} string \"${CurrentKextCFBundleVersion}\"" "${AppleKextExcludeListKextInfoPlistPath}")"
+  									if [[ "${Result}" ]]
+  										then
+  											#printf "Error\n"
+  											let "ErrorsCount+=1"
+ 	 									else
+  											#printf "OK\n"
+  											let "AddedUnSigKextsCount+=1"
+  									fi
+							fi
+  					fi
+			fi
+ 	fi
+	if [ `expr "$AllCheckKextsCount" % 50` -eq "0" ]
+		then
+			 printf "."
+	fi
+ 	done
+finishtime=`date +%s`
+
+IFS=$OldIFS   # return old $IFS
+
+printf " 完成!\n"
+
+echo "-- 总计处理: (${AllCheckKextsCount} 个kexts) 添加了 ${AddedUnSigKextsCount}, 更新了 ${UpdatedUnSigKextsCount} 个项目 用时 $(($finishtime-$starttime)) 秒"
+echo
+}
+
+InstallKext() {
+
+CurrentKext=$1
+BaseDropName=$(basename "${CurrentKext}")
+DirFilesName="${WorkDir1}"
+
+KextArch=$(kextfind -no-paths "${CurrentKext}" -print0 -echo -n " (arches) " -pa)
+
+cat <<EOF
+任务: 安装 "${KextArch}"
+         到 "${WorkDir1}"
+ 
+EOF
+
+	echo
+	OldIFS=$IFS
+	IFS=$'\n'
+
+    for Files in $(find "${WorkDir1}" -name "${BaseDropName}")
+	    do
+
+		DirFilesName=$(dirname "${Files}") 
+		printf "找到已有的 \"${Files}\"\n"
+		printf "\n"
+
+		if [ -e "${DirFilesName}/${BaseDropName}.bak" ]
+			then
+				rm -rf "${DirFilesName}/${BaseDropName}.bak"
+		fi
+
+		printf "备份 : \"${BaseDropName}\" 到 \"${BaseDropName}.bak\" ... "
+
+		if mv -f "${DirFilesName}/${BaseDropName}" "${DirFilesName}/${BaseDropName}.bak"
+			then
+				printf "完成!\n"
+			else
+				printf "失败!\n"
+		fi
+		printf "\n"
+
+        done
+	
+	IFS=$OldIFS   # return old $IFS
+
+printf "正在安装: \"${BaseDropName}\" ... "
+
+if cp -Rf "${CurrentKext}" "${DirFilesName}"
+	then
+		printf "完成!\n"
+	else
+		printf "无法复制源文件!\n"
+		return 1
+fi		
+
+printf "\n"
+
+SetPermissionsMod "${DirFilesName}/${BaseDropName}"
+#
+touch "${DirFilesName}/${BaseDropName}"
+
+}
+
+saveExit() {
+
+printf "同步硬盘缓存 ... "
+sync
+printf "完成!\n"
+}
+
+endProgram() {
+echo
+echo "任务完成!"
+echo "Have a nice ... day(night)"
+printf "Enjoy ...\n\a"
+exit
+}
+
+checkFileExist() {
+
+if [[ -e "$1" ]]
+	then
+	echo "\"$1\" 找到"
+		return 0
+	else
+	echo "\"$1\" 未找到"
+		return 1
+fi
+}
+
+main() {
+
+cat <<EOF
+任务: 完全修复 "${WorkDir1}" 和
+                "${WorkDir2}" 文件夹.
+         
+EOF
+
+UpdateOSKextSigExceptionList "${WorkDir1}"
+
+# Must work OK - nothing bad with dir changing
+if [ -d "${WorkDir2}" ]
+    then
+        SetPermissionsMod "${WorkDir2}"
+fi
+
+SetPermissionsMod "${WorkDir1}"
+
+SystemCacheUpdate
+
+echo
+
+}
+
+if [ -n "${1}" ]
+	then
+ 		FullDropName="${1}"
+ 		BaseDropName="$(basename "${FullDropName}")"
+ 
+ 		case "${BaseDropName}" in
+ 			*.mkext)
+ 				memoMSG
+ 				SystemSpecMSG
+ 				StartMSG
+#				echo "${BaseDropName}"
+ 				unpackMkext "${FullDropName}"
+ 				saveExit
+ 				endProgram
+ 				;;
+ 
+ 			*.kext|*.ppp|*.plugin|*.bundle)
+ 				memoMSG
+ 				SystemSpecMSG
+ 				StartMSG
+ 				i=1
+ 				while [ $i -le $# ]
+ 				do
+                 	CurrentKext="$(eval "echo \${$i}")"
+ 					case "$(basename "$CurrentKext")" in
+ 			    		*.kext|*.ppp|*.plugin|*.bundle)
+ 							InstallKext "$(eval "echo \${$i}")"
+						;;
+ 					esac
+ 					i=`expr $i + 1`
+ 				done
+ 				UpdateOSKextSigExceptionList "${WorkDir1}"
+				SystemCacheUpdate
+ 				echo
+ 				saveExit
+ 				endProgram
+ 				;;
+ 	
+ 			*)
+             	# if file is directory then pack it
+             	if [ -d "$FullDropName" ]
+                     then
+ 				        memoMSG
+ 				        SystemSpecMSG
+ 						StartMSG
+ 				        packMkext "${FullDropName}"
+ 				        saveExit
+ 				        endProgram
+ 				    else
+         				memoMSG
+         				usage
+         				exit
+                 fi
+                 ;;
+ 		esac
+
+fi
+
+memoMSG
+SystemSpecMSG
+StartMSG
+
+main
+
+saveExit
+endProgram
+ ��_NSKeyedArchiver�Troot�    # - 2 5 ;O�O�O�O�O�                           O��#@$      VMonaco�#Q*		�	  1 < C ] q y � � � � � � � � � �	(:GSTU]jrs{|~QaQbQkQrQtQvQwQxQy             (              Qz
